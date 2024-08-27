@@ -9,7 +9,7 @@ import {
 } from '../../scripts/scripts.js';
 
 import {
-  loadSections,
+  loadBlocks,
 } from '../../scripts/aem.js';
 
 /**
@@ -34,7 +34,7 @@ export async function loadFragment(path) {
       resetAttributeBase('source', 'srcset');
 
       decorateMain(main);
-      await loadSections(main);
+      await loadBlocks(main);
       return main;
     }
   }
@@ -51,5 +51,14 @@ export default async function decorate(block) {
       block.closest('.section').classList.add(...fragmentSection.classList);
       block.closest('.fragment').replaceWith(...fragment.childNodes);
     }
+  }
+}
+
+export function decorateFragment(block){
+  const link = block.querySelector('a');
+  const path = link ? link.getAttribute('href') : block.textContent.trim();
+  
+  if(path.includes('/fragments/')){
+    decorate(block);
   }
 }

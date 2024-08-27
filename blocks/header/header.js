@@ -1,3 +1,13 @@
+/* eslint-disable import/no-unresolved */
+/* eslint-disable import/no-extraneous-dependencies */
+// Drop-in Providers
+//import { render as cartProvider } from '@dropins/storefront-cart/render.js';
+
+// Drop-in Containers
+//import MiniCart from '@dropins/storefront-cart/containers/MiniCart.js';
+
+// Drop-in Tools
+//import { events } from '@dropins/tools/event-bus.js';
 import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 
@@ -17,21 +27,6 @@ function closeOnEscape(e) {
       // eslint-disable-next-line no-use-before-define
       toggleMenu(nav, navSections);
       nav.querySelector('button').focus();
-    }
-  }
-}
-
-function closeOnFocusLost(e) {
-  const nav = e.currentTarget;
-  if (!nav.contains(e.relatedTarget)) {
-    const navSections = nav.querySelector('.nav-sections');
-    const navSectionExpanded = navSections.querySelector('[aria-expanded="true"]');
-    if (navSectionExpanded && isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleAllNavSections(navSections, false);
-    } else if (!isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleMenu(nav, navSections, false);
     }
   }
 }
@@ -80,43 +75,93 @@ function toggleMenu(nav, navSections, forceExpanded = null) {
   if (isDesktop.matches) {
     navDrops.forEach((drop) => {
       if (!drop.hasAttribute('tabindex')) {
+        drop.setAttribute('role', 'button');
         drop.setAttribute('tabindex', 0);
         drop.addEventListener('focus', focusNavSection);
       }
     });
   } else {
     navDrops.forEach((drop) => {
+      drop.removeAttribute('role');
       drop.removeAttribute('tabindex');
       drop.removeEventListener('focus', focusNavSection);
     });
   }
-
   // enable menu collapse on escape keypress
   if (!expanded || isDesktop.matches) {
     // collapse menu on escape press
     window.addEventListener('keydown', closeOnEscape);
-    // collapse menu on focus lost
-    nav.addEventListener('focusout', closeOnFocusLost);
   } else {
     window.removeEventListener('keydown', closeOnEscape);
-    nav.removeEventListener('focusout', closeOnFocusLost);
   }
 }
 
+function addAnimation() {
+  window.addEventListener('scroll', () => {
+    const header = document.getElementsByClassName('header-nav-wrapper')[0];
+    const scrollPosition = window.scrollY;
+    const viewportWidth = window.innerWidth;
+
+    if (viewportWidth > 900) {
+      if (scrollPosition > 168) {
+        header.classList.add('minimized');
+      } else {
+        header.classList.remove('minimized');
+      }
+    } else {
+      header.classList.remove('minimized');
+    }
+  });
+}
+
+function setActiveTab() {
+  const currentPath = window.location.pathname;
+  const matchResult = currentPath.match(/^\/([^/]+)/);
+  const path = matchResult ? matchResult[1] : null;
+  const navTabLinks = document.querySelector('.nav-sections ul');
+
+  [...navTabLinks.children].forEach((tab) => {
+    const link = tab.querySelector('a');
+    const linkTitle = link.title.toLowerCase();
+
+    if (linkTitle === path || (linkTitle === 'shop' && ['products', 'equipment', 'search'].includes(path))) {
+      link.classList.add('active');
+    }
+  });
+
+  /* temp - only for the demo since the adventures landing page is the "home page"
+  */
+  /*if (!path) {
+    const adventureTab = navTabLinks.querySelector('a[title="Adventures"],a[title="adventures"]');
+    adventureTab.classList.add('active');
+  }*/
+}
+
 /**
- * loads and decorates the header, mainly the nav
+ * decorates the header, mainly the nav
  * @param {Element} block The header block element
  */
 export default async function decorate(block) {
-  // load nav as fragment
-  const navMeta = getMetadata('nav');
-  const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
+  const locale = getMetadata('locale');
+  const navPath = locale ? `/${locale}/nav` : '/nav';
   const fragment = await loadFragment(navPath);
+  let languages = null;
+
+  try {
+    const response = await fetch('/languages.json');
+    languages = await response.json();
+  } catch (e) {
+    // error handling
+  }
 
   // decorate nav DOM
-  block.textContent = '';
   const nav = document.createElement('nav');
   nav.id = 'nav';
+
+  if (!fragment) {
+    return;
+  }
+  
   while (fragment.firstElementChild) nav.append(fragment.firstElementChild);
 
   const classes = ['brand', 'sections', 'tools'];
@@ -145,6 +190,76 @@ export default async function decorate(block) {
       });
     });
   }
+  const navTools = nav.querySelector('.nav-tools');
+  if (languages?.data) {
+    // Create the select element
+    const languageSelector = document.createElement('select');
+    languageSelector.id = 'language-selector';
+
+    languages.data.forEach((language) => {
+      const option = document.createElement('option');
+      option.value = language.url;
+      option.textContent = language.locale;
+      languageSelector.appendChild(option);
+    });
+
+    // Set the default value based on the locale meta tag
+    // eslint-disable-next-line max-len
+    const defaultLanguage = languages.data.find((lang) => lang.locale.toLowerCase() === locale.toLowerCase());
+    if (defaultLanguage) {
+      languageSelector.value = defaultLanguage.url;
+    }
+
+    // Add event listener to handle change event
+    languageSelector.addEventListener('change', () => {
+      window.location.href = languageSelector.value;
+    });
+
+//    const navTools = nav.querySelector('.nav-tools');
+    const liElem = document.createElement('div');
+    liElem.append(languageSelector);
+    liElem.classList.add('lang-nav-selector');
+    navTools.append(liElem);
+  }
+
+
+
+    /** Search */
+  const search = document.createRange().createContextualFragment(`
+  <div class="search-wrapper">
+    <button type="button" class="button nav-search-button">Search</button>
+    <div class="nav-search-input nav-search-panel nav-panel hidden">
+      <form id="search_mini_form" action="/search" method="GET">
+        <input id="search" type="search" name="q" placeholder="Search" />
+      </form>
+    </div>
+  </div>
+  `);
+
+  navTools.append(search);
+
+  const searchPanel = navTools.querySelector('.nav-search-panel');
+  const searchButton = navTools.querySelector('.nav-search-button');
+  const searchInput = searchPanel.querySelector('input');
+
+  function toggleSearch(state) {
+    const show = state ?? !searchPanel.classList.contains('nav-panel--show');
+    searchPanel.classList.toggle('nav-panel--show', show);
+    if (show) searchInput.focus();
+  }
+
+  navTools.querySelector('.nav-search-button').addEventListener('click', async () => {
+    await import('./searchbar.js');
+    document.querySelector('header .nav-search-input').classList.toggle('hidden');
+    toggleSearch();
+  });
+
+  // Close panels when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!searchPanel.contains(e.target) && !searchButton.contains(e.target)) {
+      toggleSearch(false);
+    }
+  });
 
   // hamburger for mobile
   const hamburger = document.createElement('div');
@@ -160,7 +275,10 @@ export default async function decorate(block) {
   isDesktop.addEventListener('change', () => toggleMenu(nav, navSections, isDesktop.matches));
 
   const navWrapper = document.createElement('div');
-  navWrapper.className = 'nav-wrapper';
+  navWrapper.className = 'header-nav-wrapper';
   navWrapper.append(nav);
   block.append(navWrapper);
+
+  addAnimation();
+  setActiveTab();
 }
