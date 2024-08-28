@@ -180,7 +180,8 @@ header nav .nav-brand a {
 }
 
 header nav .nav-brand img {
-  height: auto;
+  height: 48px;
+  width: auto;
 
   @media (width<=768px) {
     & {
