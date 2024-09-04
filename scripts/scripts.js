@@ -488,3 +488,20 @@ async function loadPage() {
 }
 
 loadPage();
+
+const bulkActivate = ({ detail }) => {
+  const sk = detail.data;
+  console.log("bulk-activate");
+};
+
+const sk = document.querySelector('helix-sidekick');
+if (sk) {
+  // sidekick already loaded
+  sk.addEventListener('custom:bulkActivate', bulkActivate);
+} else {
+  // wait for sidekick to be loaded
+  document.addEventListener('sidekick-ready', () => {
+    document.querySelector('helix-sidekick')
+      .addEventListener('custom:bulkActivate', bulkActivate);
+  }, { once: true });
+}
