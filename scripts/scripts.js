@@ -19,7 +19,7 @@ import {
   waitForLCP,
 } from './aem.js';
 import initializeDropins from './dropins.js';
-
+import { activateAll } from './bulkactivate.js';
 // Define an execution context
 const pluginContext = {
   getAllMetadata,
@@ -489,9 +489,12 @@ async function loadPage() {
 
 loadPage();
 
+/*bulk activation code start*/
 const bulkActivate = ({ detail }) => {
   const sk = detail.data;
   console.log("bulk-activate");
+  activateAll("preview","pbakliwal-wknd-02092024-100513");
+  activateAll("live","pbakliwal-wknd-02092024-100513");
 };
 
 const sk = document.querySelector('helix-sidekick');
