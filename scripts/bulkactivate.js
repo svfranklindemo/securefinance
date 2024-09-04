@@ -51,7 +51,9 @@ const requestOptions = {
 };
 
 export function activateAll(operation,projectName) {
-    fetch("https://admin.hlx.page/"+operation+"/svfranklindemo/"+projectName+"/main/*", requestOptions)
+    const repo = window.origin.split("--")[1];
+    const owner = window.origin.split("--")[2].split('.')[0];
+    fetch("https://admin.hlx.page/"+repo+"/svfranklindemo/"+owner+"/main/*", requestOptions)
         .then((response) => response.text())
         .then((result) => console.log(result))
         .catch((error) => console.error(error));
