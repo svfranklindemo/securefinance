@@ -493,8 +493,8 @@ loadPage();
 const bulkActivate = ({ detail }) => {
   const sk = detail.data;
   console.log("bulk-activate");
-  activateAll("preview","pbakliwal-wknd-02092024-100513");
-  activateAll("live","pbakliwal-wknd-02092024-100513");
+  activateAll("preview");
+  activateAll("live");
 };
 
 const sk = document.querySelector('helix-sidekick');
