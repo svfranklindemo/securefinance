@@ -959,6 +959,11 @@ footer {
         border-color: #3F6470;
         transition: all .5s ease;
     }
+
+    .section.form-container, .form, .form input, .form select{
+        background-color: #f5f4f3;
+        font-family: 'Oxygen', sans-serif;
+    }
 }
 
 .table {
