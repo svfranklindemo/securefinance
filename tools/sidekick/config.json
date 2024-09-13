@@ -36,7 +36,6 @@
         {
             "id":"bulk-Activate",
             "title":"Bulk Activate",
-            "environments":["admin,preview"],
             "event":"bulkActivate"
         }
     ]
