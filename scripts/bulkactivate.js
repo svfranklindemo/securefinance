@@ -38,7 +38,10 @@ const raw = JSON.stringify({
         "/fragments/investor/business-presentation",
         "/fragments/investor/calculator",
         "/fragments/investor/results-business-updates",
-        "/tools/sidekick/library.json"
+        "/tools/sidekick/library.json",
+        "/fragments/finance-calculator",
+        "/forms",
+        "/forms/finance.json"
     ],
     "delete": false
 });
