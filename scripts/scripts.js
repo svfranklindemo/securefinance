@@ -193,22 +193,17 @@ function isExternalImage(element, externalImageMarker) {
   // if the element is not an anchor, it's not an external image
   if (element.tagName !== 'A') return false;
 
-
   // if the element is an anchor with the external image marker as text content,
   // it's an external image
   if (element.textContent.trim() === externalImageMarker) {
     return true;
   }
 
-
   // if the element is an anchor with the href as text content and the href has
   // an image extension, it's an external image
-  if (element.textContent.trim() === element.getAttribute('href')) {
-    const ext = getUrlExtension(element.getAttribute('href'));
-    return ext && ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext.toLowerCase());
-  }
+  const ext = getUrlExtension(element.getAttribute('href'));
+  return (ext && ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext.toLowerCase()));
 }
-
 
 /*
   * Appends query params to a URL
@@ -288,6 +283,33 @@ export function createOptimizedPicture(src, alt = '', eager = false, breakpoints
   return picture;
 }
 
+/**
+ * Gets the cleaned up URL removing barriers to get picture src.
+ * @param {string} url The URL
+ * @returns {string} The normalised url
+ * @private
+ * @example
+ * get_url_extension('https://delivery-p129624-e1269699.adobeaemcloud.com/adobe/assets/urn:aaid:aem:a...492d81/original/as/strawberry.jpg?preferwebp=true');
+ * // returns 'https://delivery-p129624-e1269699.adobeaemcloud.com/adobe/assets/urn:aaid:aem:a...492d81/as/strawberry.jpg?preferwebp=true'
+ * get_url_extension('https://delivery-p129624-e1269699.adobeaemcloud.com/adobe/assets/urn:aaid:aem:a...492d81/as/strawberry.jpg?accept-experimental=1&preferwebp=true');
+ * // returns 'https://delivery-p129624-e1269699.adobeaemcloud.com/adobe/assets/urn:aaid:aem:a...492d81/as/strawberry.jpg?preferwebp=true'
+ * get_url_extension('https://delivery-p129624-e1269699.adobeaemcloud.com/adobe/assets/urn:aaid:aem:a...492d81/as/strawberry.jpg?width=2048&height=2048&preferwebp=true');
+ * // returns 'https://delivery-p129624-e1269699.adobeaemcloud.com/adobe/assets/urn:aaid:aem:a...492d81/as/strawberry.jpg?preferwebp=true'
+ * get_url_extension('https://author-p129624-e1269699.adobeaemcloud.com/adobe/assets/urn:aaid:aem:a...492d81/as/strawberry.jpg?accept-experimental=1&width=2048&height=2048&preferwebp=true');
+ * // returns 'https://author-p129624-e1269699.adobeaemcloud.com/adobe/assets/urn:aaid:aem:a...492d81/as/strawberry.jpg?accept-experimental=1&width=2048&height=2048&preferwebp=true'
+ */
+export function createOptimizedSrc(src) {
+  const isDMOpenAPIUrl = /^(https?:\/\/delivery-p[0-9]+-e[0-9-cmstg]+\.adobeaemcloud\.com\/(.*))/gm.test(src);
+  const srcUrl = new URL(src);
+  if (isDMOpenAPIUrl) {
+    srcUrl.searchParams.delete('accept-experimental');
+    srcUrl.searchParams.delete('width');
+    srcUrl.searchParams.delete('height');
+    srcUrl.pathname = srcUrl.pathname.replace('/original/', '/');
+  }
+  return srcUrl.toString();
+}
+
 
 /*
   * Decorates external images with a picture element
@@ -301,9 +323,8 @@ function decorateExternalImages(ele, deliveryMarker) {
   const extImages = ele.querySelectorAll('a');
   extImages.forEach((extImage) => {
     if (isExternalImage(extImage, deliveryMarker)) {
-      const extImageSrc = extImage.getAttribute('href');
+      const extImageSrc = createOptimizedSrc(extImage.getAttribute('href'));
       const extPicture = createOptimizedPicture(extImageSrc);
-
 
       /* copy query params from link to img */
       const extImageUrl = new URL(extImageSrc);
@@ -312,12 +333,14 @@ function decorateExternalImages(ele, deliveryMarker) {
         if (child.tagName === 'SOURCE') {
           const srcset = child.getAttribute('srcset');
           if (srcset) {
-            child.setAttribute('srcset', appendQueryParams(new URL(srcset, extImageSrc), searchParams));
+              const queryParams = appendQueryParams(new URL(srcset, extImageSrc), searchParams);
+              child.setAttribute('srcset', queryParams);  
           }
         } else if (child.tagName === 'IMG') {
           const src = child.getAttribute('src');
           if (src) {
-            child.setAttribute('src', appendQueryParams(new URL(src, extImageSrc), searchParams));
+            const queryParams = appendQueryParams(new URL(src, extImageSrc), searchParams);
+            child.setAttribute('src', queryParams);
           }
         }
       });
